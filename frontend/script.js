@@ -118,22 +118,26 @@ function highlightMessage(originalText) {
   const patterns = [
     // urgency
     {
-      regex: /\burgent\b|\burgently\b|\bimmediately\b|\basap\b|\bright now\b|\bwithin the next\b|\bdo not delay\b/gi,
+      regex:
+        /\burgent\b|\burgently\b|\bimmediately\b|\basap\b|\bright now\b|\bwithin the next\b|\bdo not delay\b/gi,
       cls: "token-urgency",
     },
     // authority
     {
-      regex: /\bceo\b|\bcfo\b|\bchief executive\b|\bfinance director\b|\bvp\b|\bvice president\b|\bboard\b|\bexecutive\b/gi,
+      regex:
+        /\bceo\b|\bcfo\b|\bchief executive\b|\bfinance director\b|\bvp\b|\bvice president\b|\bboard\b|\bexecutive\b/gi,
       cls: "token-authority",
     },
     // secrecy
     {
-      regex: /\bconfidential\b|\bdo not tell\b|\bdo not share\b|\bkeep this between us\b|\bsecret\b|\boff the record\b/gi,
+      regex:
+        /\bconfidential\b|\bdo not tell\b|\bdo not share\b|\bkeep this between us\b|\bsecret\b|\boff the record\b/gi,
       cls: "token-secrecy",
     },
     // payment
     {
-      regex: /\bwire transfer\b|\bbank transfer\b|\baccount\b|\brouting\b|\bswift\b|\biban\b|\bcrypto\b|\bbitcoin\b|\bgift cards?\b|\bprepaid\b|\bsafe account\b|\bholding account\b/gi,
+      regex:
+        /\bwire transfer\b|\bbank transfer\b|\baccount\b|\brouting\b|\bswift\b|\biban\b|\bcrypto\b|\bbitcoin\b|\bgift cards?\b|\bprepaid\b|\bsafe account\b|\bholding account\b/gi,
       cls: "token-payment",
     },
   ];
@@ -268,7 +272,9 @@ function initOrUpdateRiskHistoryChart(summary) {
 // --- Load MongoDB summary for history chart ---
 async function refreshHistorySummary() {
   try {
-    const res = await fetch("/api/events-summary");
+    const res = await fetch(
+      "https://deepfake-fraud-api.onrender.com/api/events-summary",
+    );
     const data = await res.json();
     if (!data.ok) {
       return;
@@ -296,11 +302,14 @@ async function runAnalysis() {
   setStatus("Running AI-guided fraud analysis…", "info");
 
   try {
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, channel, actorRole, amount }),
-    });
+    const res = await fetch(
+      "https://deepfake-fraud-api.onrender.com/api/analyze",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, channel, actorRole, amount }),
+      },
+    );
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -314,11 +323,7 @@ async function runAnalysis() {
     riskScoreNumber.textContent =
       typeof finalScore === "number" ? Math.round(finalScore) : "--";
     riskScoreLabel.textContent =
-      level === "HIGH"
-        ? "HIGH"
-        : level === "MEDIUM"
-        ? "MEDIUM"
-        : "LOW";
+      level === "HIGH" ? "HIGH" : level === "MEDIUM" ? "MEDIUM" : "LOW";
 
     if (level === "HIGH") {
       riskScoreDescription.textContent =
@@ -337,22 +342,14 @@ async function runAnalysis() {
     // Heuristics summary
     const h = heuristics || {};
     const listItems = [];
-    listItems.push(
-      `Heuristic score: ${Math.round(h.baseScore ?? 0)}/100`
-    );
-    listItems.push(
-      `Urgency phrases detected: ${h.urgencyHits ?? 0}`
-    );
-    listItems.push(
-      `Authority/role phrases detected: ${h.authorityHits ?? 0}`
-    );
-    listItems.push(
-      `Secrecy / bypass instructions: ${h.secrecyHits ?? 0}`
-    );
+    listItems.push(`Heuristic score: ${Math.round(h.baseScore ?? 0)}/100`);
+    listItems.push(`Urgency phrases detected: ${h.urgencyHits ?? 0}`);
+    listItems.push(`Authority/role phrases detected: ${h.authorityHits ?? 0}`);
+    listItems.push(`Secrecy / bypass instructions: ${h.secrecyHits ?? 0}`);
     listItems.push(
       `Payment-instruction keywords (wire/crypto/gift cards): ${
         h.paymentHits ?? 0
-      }`
+      }`,
     );
     if (h.amount != null && !Number.isNaN(h.amount)) {
       listItems.push(`Parsed requested amount ≈ ${h.amount.toLocaleString()}`);
@@ -372,7 +369,11 @@ async function runAnalysis() {
     }
 
     // Safe handling advice
-    if (ai && Array.isArray(ai.safe_handling_advice) && ai.safe_handling_advice.length) {
+    if (
+      ai &&
+      Array.isArray(ai.safe_handling_advice) &&
+      ai.safe_handling_advice.length
+    ) {
       safeAdviceList.innerHTML = ai.safe_handling_advice
         .map((txt) => `<li>${txt}</li>`)
         .join("");
@@ -387,7 +388,7 @@ async function runAnalysis() {
     initOrUpdateAiFactorsChart(ai?.factor_scores || null);
     initOrUpdateRulesVsAiChart(
       Math.round(heuristics?.baseScore ?? 0),
-      Math.round(ai?.overall_risk_score ?? 0)
+      Math.round(ai?.overall_risk_score ?? 0),
     );
 
     // Refresh Mongo history
@@ -395,7 +396,7 @@ async function runAnalysis() {
 
     setStatus(
       "Analysis complete. Risk signal blended from heuristics, Groq LLM, and MongoDB analytics.",
-      "success"
+      "success",
     );
   } catch (err) {
     console.error(err);
@@ -443,6 +444,9 @@ messageInput.addEventListener("keydown", (e) => {
     runAnalysis();
   }
 });
+
+const cors = require("cors");
+app.use(cors());
 
 // Initial state
 setStatus("Paste a payment instruction or load a sample to begin.", "info");
