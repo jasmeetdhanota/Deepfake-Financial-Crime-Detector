@@ -273,7 +273,7 @@ function initOrUpdateRiskHistoryChart(summary) {
 async function refreshHistorySummary() {
   try {
     const res = await fetch(
-      "https://deepfake-fraud-api.onrender.com/api/events-summary",
+      "https://deepfake-financial-crime-detector.onrender.com/api/analyze",
     );
     const data = await res.json();
     if (!data.ok) {
@@ -303,7 +303,7 @@ async function runAnalysis() {
 
   try {
     const res = await fetch(
-      "https://deepfake-fraud-api.onrender.com/api/analyze",
+      "https://deepfake-financial-crime-detector.onrender.com/api/events-summary",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
