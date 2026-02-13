@@ -70,3 +70,48 @@ Low Risk
 Medium Risk
 
 High Risk
+
+**System-Architecture**
+
+User Input
+   ↓
+LLM Semantic Analysis
+   ↓
+Heuristic Risk Engine
+   ↓
+Fraud Score Calculation
+   ↓
+MongoDB Risk Storage
+   ↓
+Investigator Dashboard
+
+**💼 Enterprise Use Cases**
+
+Banking payment fraud detection
+
+FinCrime investigation support
+
+Risk operations analytics
+
+Cybersecurity research
+
+AI fraud simulation labs
+
+**🚀 Future Enhancements**
+
+Voice deepfake detection
+
+Email header analysis
+
+Graph fraud networks
+
+Investigator case workflow
+
+Real-time payment monitoring
+
+**👩‍💻 Author**
+
+Jasmeet Dhanota
+MS Information Systems — Pace University
+
+Focused on AI, FinTech, Fraud Risk & Payment Intelligence Systems.
