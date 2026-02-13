@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AI Payment Fraud Risk Lab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <div class="page">
+      <!-- Top bar -->
+      <header class="top-bar">
+        <div class="top-left">
+          <div class="logo-dot"></div>
+          <div class="title-block">
+            <h1>AI Payment Fraud Risk Lab</h1>
+            <p class="subtitle">
+              J.P. Morgan–style FinCrime &amp; deepfake payment analyzer
+              (prototype by Ayush Gehlot)<br />
+              <span class="subtitle-small">
+                Aligned with J.P. Morgan Applied Research tracks:
+                <span class="chip chip-link">AI Security</span>
+                <span class="chip chip-link">Responsible AI</span>
+                <span class="chip chip-link">Financial Crime Prevention</span>
+              </span>
+            </p>
+          </div>
+        </div>
+        <div class="top-right">
+          <span class="chip chip-pill"
+            >JPMC-inspired · FinCrime AI · Risk Analytics</span
+          >
+        </div>
+      </header>
+
+      <main class="layout">
+        <!-- LEFT COLUMN: INPUT -->
+        <section class="panel panel-left">
+          <h2 class="panel-title">1. Ingest payment instruction</h2>
+          <p class="panel-caption">
+            Paste an email / chat / voice transcript that instructs an urgent
+            payment. The engine simulates JPMC-style FinCrime screening and AI
+            risk scoring.
+          </p>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="channel">Channel</label>
+              <select id="channel">
+                <option>Email</option>
+                <option>Chat</option>
+                <option>WhatsApp</option>
+                <option>Voice transcript</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="actorRole">Claimed sender role</label>
+              <select id="actorRole">
+                <option>CEO</option>
+                <option>CFO</option>
+                <option>Vendor / Supplier</option>
+                <option>Bank fraud team</option>
+                <option>Colleague / Internal</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="amountInput">Requested amount (optional)</label>
+              <input
+                type="text"
+                id="amountInput"
+                placeholder="e.g. 48,750 USD"
+              />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="messageInput">Message content</label>
+            <textarea
+              id="messageInput"
+              rows="10"
+              placeholder="Paste the full text here..."
+            ></textarea>
+            <p class="field-hint" id="inputHint">
+              This stays on your machine – used only for this prototype
+              analysis.
+            </p>
+          </div>
+
+          <div class="button-row">
+            <button id="analyzeBtn" class="btn btn-primary">
+              Run risk analysis
+            </button>
+            <button id="sampleBtn" class="btn btn-ghost">
+              Next sample (CEO impersonation BEC email)
+            </button>
+          </div>
+
+          <p class="status-line" id="statusLine"></p>
+        </section>
+
+        <!-- RIGHT COLUMN: SCORE & EXPLANATION -->
+        <section class="panel panel-right">
+          <div class="score-area">
+            <div class="score-circle">
+              <div class="score-inner" id="riskScoreNumber">--</div>
+            </div>
+            <div class="score-text">
+              <h2 class="panel-title">2. JPMC-style risk signal</h2>
+              <p id="riskScoreLabel" class="risk-label">Not analyzed</p>
+              <p id="riskScoreDescription" class="risk-description">
+                Run an analysis to see if this payment instruction exhibits
+                deepfake / BEC / social engineering patterns.
+              </p>
+              <div class="legend-row">
+                <span class="legend-chip legend-low">0–39 Low</span>
+                <span class="legend-chip legend-med">40–69 Medium</span>
+                <span class="legend-chip legend-high">70–100 High</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-card">
+              <h3>Key red flags detected</h3>
+              <ul id="keyIndicatorsList" class="bullet-list">
+                <li>No data.</li>
+              </ul>
+              <div class="divider"></div>
+              <p class="info-subheading">Heuristic rule engine</p>
+              <ul id="heuristicSummary" class="bullet-list bullet-small">
+                <li>Heuristic score: --/100</li>
+              </ul>
+            </div>
+
+            <div class="info-card">
+              <h3>Safe handling guidance</h3>
+              <ul id="safeAdviceList" class="bullet-list">
+                <li>No data.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="info-card info-card-wide">
+            <h3>Explained message (highlighted risk phrases)</h3>
+            <p class="info-subheading">
+              Urgency, authority, secrecy, and payment-instruction phrases are
+              highlighted so investigators can see why the model reacted.
+            </p>
+            <div id="highlightedMessage" class="highlighted-message">
+              Message highlights will appear here after you run an analysis.
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- BOTTOM: ANALYTICS -->
+      <section class="panel panel-bottom">
+        <div class="panel-bottom-header">
+          <div>
+            <h2 class="panel-title">Risk analytics views</h2>
+            <p class="panel-caption">
+              View how the model scores each pattern, how the final risk is
+              blended between deterministic rules and LLM semantics, and how
+              risk levels accumulate over time from MongoDB.
+            </p>
+          </div>
+          <div class="tab-row">
+            <button class="chart-tab active" data-target="aiFactorsView">
+              AI factor signals
+            </button>
+            <button class="chart-tab" data-target="rulesVsAiView">
+              Rules vs AI contribution
+            </button>
+            <button class="chart-tab" data-target="historyView">
+              Risk history (MongoDB)
+            </button>
+          </div>
+        </div>
+
+        <div class="chart-views">
+          <div class="chart-view active" id="aiFactorsView">
+            <canvas id="aiFactorsChart"></canvas>
+          </div>
+          <div class="chart-view" id="rulesVsAiView">
+            <canvas id="rulesVsAiChart"></canvas>
+          </div>
+          <div class="chart-view" id="historyView">
+            <canvas id="riskHistoryChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="footer-left">
+          Prototype for J.P. Morgan Chase networking event · JPMC-inspired UI,
+          not an official JPMC tool
+        </div>
+        <div class="footer-right">
+          Stack: Node, Express, Groq Llama 3.3, MongoDB, Vanilla JS, Chart.js
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
