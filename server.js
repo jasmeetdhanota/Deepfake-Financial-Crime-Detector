@@ -1,22 +1,20 @@
-// server.js - Groq + MongoDB version (fixed JSON parsing & NaN)
+// server.js — Production Backend (Render-ready)
 // AI Payment Fraud Risk Lab Backend
 
 import express from "express";
-import path from "path";
 import dotenv from "dotenv";
 import cors from "cors";
-import { fileURLToPath } from "url";
 import Groq from "groq-sdk";
 import mongoose from "mongoose";
 
 dotenv.config();
 
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 3000;
 
-// --- Groq client ---
+// ===============================
+// 🔐 Groq Client Setup
+// ===============================
 if (!process.env.GROQ_API_KEY) {
   console.warn("⚠️ GROQ_API_KEY is not set in .env. AI analysis will fail.");
 }
@@ -25,47 +23,48 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// --- MongoDB (Mongoose) setup ---
+// ===============================
+// 🗄️ MongoDB (Mongoose) Setup
+// ===============================
 const MONGODB_URI = process.env.MONGODB_URI;
 let RiskEvent = null;
 
 if (!MONGODB_URI) {
   console.warn(
-    "⚠️ MONGODB_URI is not set in .env. Risk events will not be persisted."
+    "⚠️ MONGODB_URI is not set in .env. Risk events will not be persisted.",
   );
 } else {
   mongoose
     .connect(MONGODB_URI)
-    .then(() => {
-      console.log("✅ Connected to MongoDB");
-    })
-    .catch((err) => {
-      console.error("❌ MongoDB connection error:", err);
-    });
+    .then(() => console.log("✅ Connected to MongoDB"))
+    .catch((err) => console.error("❌ MongoDB connection error:", err));
 
   const riskEventSchema = new mongoose.Schema(
     {
       channel: String,
       actorRole: String,
       amountRaw: String,
-      parsedAmount: Number, // can be null / undefined
+      parsedAmount: Number,
       finalScore: Number,
       riskLevel: String,
       heuristics: Object,
       ai: Object,
     },
-    { timestamps: true }
+    { timestamps: true },
   );
 
   RiskEvent = mongoose.model("RiskEvent", riskEventSchema);
 }
 
-// --- Middleware ---
+// ===============================
+// ⚙️ Middleware
+// ===============================
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
-// --- Simple heuristic analysis (rule-based) ---
+// ===============================
+// 🧠 Heuristic Analysis
+// ===============================
 function heuristicAnalysis(message = "", amountRaw = "") {
   const text = message.toLowerCase();
 
@@ -131,15 +130,15 @@ function heuristicAnalysis(message = "", amountRaw = "") {
   const paymentHits = countMatches(paymentPatterns);
   const metaHits = countMatches(suspiciousMetaPatterns);
 
-  // ✅ SAFE amount parsing: never NaN, use null when not present
+  // Safe amount parsing
   let parsedAmount = null;
-  if (amountRaw !== undefined && amountRaw !== null) {
-    const cleaned = String(amountRaw).replace(/[^0-9.]/g, "").trim();
+  if (amountRaw) {
+    const cleaned = String(amountRaw)
+      .replace(/[^0-9.]/g, "")
+      .trim();
     if (cleaned !== "") {
       const val = parseFloat(cleaned);
-      if (!Number.isNaN(val)) {
-        parsedAmount = val;
-      }
+      if (!Number.isNaN(val)) parsedAmount = val;
     }
   }
 
@@ -166,48 +165,40 @@ function heuristicAnalysis(message = "", amountRaw = "") {
     secrecyHits,
     paymentHits,
     metaHits,
-    amount: parsedAmount, // always Number or null
+    amount: parsedAmount,
     baseScore,
   };
 }
 
-// --- Groq-driven semantic analysis ---
+// ===============================
+// 🤖 Groq AI Analysis
+// ===============================
 async function aiAnalysis({ message, channel, actorRole, amount }) {
   const prompt = `
 You are an AI fraud-detection assistant specializing in
-deepfake-enabled payment fraud, business email compromise (BEC), and
-social engineering in financial institutions.
+deepfake-enabled payment fraud and BEC attacks.
 
-You will be given a payment-related message and some context.
-Your job is to assess the likelihood that this is a fraudulent or
-social-engineering request.
-
-Return ONLY a JSON object with this exact structure:
+Return ONLY valid JSON:
 
 {
-  "overall_risk_score": <number 0-100>,
+  "overall_risk_score": 0-100,
   "risk_level": "LOW" | "MEDIUM" | "HIGH",
   "factor_scores": {
-    "urgency": <0-100>,
-    "authority_impersonation": <0-100>,
-    "secrecy_or_bypass": <0-100>,
-    "unusual_payment_instructions": <0-100>,
-    "language_manipulation": <0-100>
+    "urgency": 0-100,
+    "authority_impersonation": 0-100,
+    "secrecy_or_bypass": 0-100,
+    "unusual_payment_instructions": 0-100,
+    "language_manipulation": 0-100
   },
-  "key_indicators": [ "string", "string", ... ],
-  "safe_handling_advice": [ "string", "string", ... ],
-  "short_summary": "1-2 sentence human-readable explanation."
+  "key_indicators": [],
+  "safe_handling_advice": [],
+  "short_summary": ""
 }
 
-Be conservative: if there are multiple red flags,
-"overall_risk_score" should be 70+ and "HIGH".
-
-Message:
-"""${message || ""}"""
-
-Channel: ${channel || "unknown"}
-Claimed sender role: ${actorRole || "unknown"}
-Requested amount: ${amount || "not specified"}
+Message: """${message}"""
+Channel: ${channel}
+Role: ${actorRole}
+Amount: ${amount}
 `;
 
   const completion = await groq.chat.completions.create({
@@ -215,8 +206,7 @@ Requested amount: ${amount || "not specified"}
     messages: [
       {
         role: "system",
-        content:
-          "You are a precise, cautious fraud risk scoring engine for a bank. ALWAYS respond with valid JSON only.",
+        content: "You are a fraud risk scoring engine. Respond ONLY with JSON.",
       },
       { role: "user", content: prompt },
     ],
@@ -226,38 +216,33 @@ Requested amount: ${amount || "not specified"}
 
   let raw = completion.choices?.[0]?.message?.content || "{}";
 
-  // --- CLEAN UP ANY MARKDOWN CODE FENCES OR EXTRA TEXT ---
   if (raw.startsWith("```")) {
-    // Remove leading ``` or ```json
     raw = raw.replace(/^```(?:json)?/i, "").trim();
-    // Remove trailing ```
     raw = raw.replace(/```$/, "").trim();
   }
 
-  // Extra safety: keep only the JSON object between first '{' and last '}'
   const firstBrace = raw.indexOf("{");
   const lastBrace = raw.lastIndexOf("}");
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+  if (firstBrace !== -1 && lastBrace !== -1) {
     raw = raw.slice(firstBrace, lastBrace + 1);
   }
 
-  let parsed;
   try {
-    parsed = JSON.parse(raw);
-  } catch (err) {
-    console.error("❌ Failed to parse AI JSON after cleanup:", err);
-    console.error("Cleaned AI output:", raw);
-    parsed = null;
+    return JSON.parse(raw);
+  } catch {
+    console.error("❌ Failed to parse AI JSON:", raw);
+    return null;
   }
-  return parsed;
 }
 
-// --- Route: Analyze message ---
+// ===============================
+// 📊 Analyze Route
+// ===============================
 app.post("/api/analyze", async (req, res) => {
   const { message, channel, actorRole, amount } = req.body || {};
 
-  if (!message || message.trim().length === 0) {
-    return res.status(400).json({ error: "Message text is required." });
+  if (!message) {
+    return res.status(400).json({ error: "Message text required" });
   }
 
   const heuristics = heuristicAnalysis(message, amount);
@@ -271,47 +256,32 @@ app.post("/api/analyze", async (req, res) => {
       amount,
     });
   } catch (err) {
-    console.error("AI analysis error:", err);
+    console.error("AI error:", err);
   }
 
   let finalScore = heuristics.baseScore;
 
-  if (aiResult && typeof aiResult.overall_risk_score === "number") {
+  if (aiResult?.overall_risk_score) {
     finalScore = (heuristics.baseScore + aiResult.overall_risk_score) / 2;
   }
 
   if (finalScore > 100) finalScore = 100;
-  if (finalScore < 0) finalScore = 0;
 
   let level = "LOW";
   if (finalScore >= 70) level = "HIGH";
   else if (finalScore >= 40) level = "MEDIUM";
 
-  // --- Persist to MongoDB (if configured) ---
   if (RiskEvent) {
-    try {
-      // avoid NaN in parsedAmount
-      let parsedAmountForDb = null;
-      if (
-        typeof heuristics.amount === "number" &&
-        !Number.isNaN(heuristics.amount)
-      ) {
-        parsedAmountForDb = heuristics.amount;
-      }
-
-      await RiskEvent.create({
-        channel: channel || "unknown",
-        actorRole: actorRole || "",
-        amountRaw: amount || "",
-        parsedAmount: parsedAmountForDb, // Number or null
-        finalScore,
-        riskLevel: level,
-        heuristics,
-        ai: aiResult,
-      });
-    } catch (err) {
-      console.error("❌ Failed to persist risk event:", err);
-    }
+    await RiskEvent.create({
+      channel,
+      actorRole,
+      amountRaw: amount,
+      parsedAmount: heuristics.amount,
+      finalScore,
+      riskLevel: level,
+      heuristics,
+      ai: aiResult,
+    });
   }
 
   res.json({
@@ -323,53 +293,36 @@ app.post("/api/analyze", async (req, res) => {
   });
 });
 
-// --- Route: stats / EDA summary for charts & Tableau ---
+// ===============================
+// 📈 Events Summary
+// ===============================
 app.get("/api/events-summary", async (req, res) => {
   if (!RiskEvent) {
     return res.json({
       ok: false,
-      error: "MongoDB not configured; no historical data.",
+      error: "MongoDB not configured",
     });
   }
 
-  try {
-    const total = await RiskEvent.countDocuments();
+  const total = await RiskEvent.countDocuments();
 
-    const byLevel = await RiskEvent.aggregate([
-      {
-        $group: {
-          _id: "$riskLevel",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
+  const byLevel = await RiskEvent.aggregate([
+    { $group: { _id: "$riskLevel", count: { $sum: 1 } } },
+  ]);
 
-    const recent = await RiskEvent.find()
-      .sort({ createdAt: -1 })
-      .limit(30)
-      .select("finalScore riskLevel parsedAmount createdAt")
-      .lean();
-
-    res.json({
-      ok: true,
-      total,
-      byLevel,
-      recent,
-    });
-  } catch (err) {
-    console.error("❌ Failed to compute events summary:", err);
-    res.status(500).json({ ok: false, error: "Failed to load stats" });
-  }
+  res.json({ ok: true, total, byLevel });
 });
 
-// --- Fallback route (serve index.html) ---
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// ===============================
+// ❤️ Health Route
+// ===============================
+app.get("/", (req, res) => {
+  res.send("AI Fraud Risk API running");
 });
 
-// --- Start server ---
+// ===============================
+// 🚀 Start Server
+// ===============================
 app.listen(PORT, () => {
-  console.log(
-    `🚀 Deepfake Fraud Detector running on http://localhost:${PORT}`
-  );
+  console.log(`🚀 Deepfake Fraud Detector running on port ${PORT}`);
 });
