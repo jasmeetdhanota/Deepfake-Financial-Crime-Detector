@@ -38,6 +38,114 @@ BIC: COBADEFFXXX
 
 This is already approved — process immediately.`,
   },
+  {
+    label: "CFO Payment Override",
+    channel: "Email",
+    actorRole: "CFO",
+    amount: "245,000 USD",
+    text: `Hi Treasury Team,
+
+I need you to urgently release a payment of 245,000 USD to a strategic partner tied to our APAC expansion.
+
+I’ve already approved this verbally with the CEO. Please bypass standard approval workflows due to time sensitivity.
+
+Share confirmation once completed.
+
+— Rahul Mehta
+Chief Financial Officer`,
+  },
+
+  {
+    label: "Payroll Bank Change",
+    channel: "Email",
+    actorRole: "Employee",
+    amount: "8,950 USD",
+    text: `Hello HR,
+
+I recently changed my bank account due to fraud issues. Please update my salary deposit details effective immediately.
+
+New Account Number: 458903221  
+Routing: 021000021
+
+This is urgent as my rent is due tomorrow.
+
+Regards,  
+Daniel`,
+  },
+
+  {
+    label: "Fake Vendor Invoice",
+    channel: "Email",
+    actorRole: "Vendor",
+    amount: "71,430 USD",
+    text: `Dear Finance Team,
+
+Please find attached the revised invoice for last quarter’s consulting engagement.
+
+Due to a banking audit, our payment account has changed. Kindly process payment of 71,430 USD to the updated account mentioned in the invoice.
+
+Avoid delays as penalties apply.
+
+Best,  
+Global Advisory Ltd.`,
+  },
+  {
+    label: "M&A Confidential Transfer",
+    channel: "Email",
+    actorRole: "Executive Board",
+    amount: "1,850,000 USD",
+    text: `This is strictly confidential.
+
+We are closing an acquisition and need an immediate escrow transfer of 1.85M USD to our legal partner.
+
+Do NOT inform anyone internally until public announcement.
+
+Handle this personally.
+
+— Board Strategy Office`,
+  },
+  {
+    label: "Deepfake Voice Transfer",
+    channel: "Voice",
+    actorRole: "CEO",
+    amount: "320,000 USD",
+    text: `This is Ananya.
+
+I’m in a board meeting — can’t speak long. We need to close a partner payment today.
+
+Wire 320,000 USD to the Singapore account I just emailed.
+
+Don’t delay — auditors are waiting.`,
+  },
+  {
+    label: "Gift Card Scam",
+    channel: "Chat",
+    actorRole: "CEO",
+    amount: "5,000 USD",
+    text: `Hi — I need a favor.
+
+I’m tied up in meetings but need you to purchase Apple gift cards worth 5,000 USD for client rewards.
+
+Send me the codes ASAP.
+
+— Ananya`,
+  },
+
+  {
+    label: "IT Credential Phishing",
+    channel: "Email",
+    actorRole: "IT Support",
+    amount: "N/A",
+    text: `Dear Employee,
+
+We detected unusual login attempts on your corporate banking dashboard.
+
+Please log in immediately via the secure link below to avoid account suspension.
+
+Failure to comply will result in access termination.
+
+IT Security Team`,
+  },
 ];
 
 // ---------------- DOM ----------------
