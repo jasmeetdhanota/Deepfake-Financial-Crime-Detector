@@ -1,13 +1,11 @@
-// ===============================
-// AI Payment Fraud Risk Lab
-// Full Production Frontend Logic
-// ===============================
+// ======================================================
+// AI Payment Fraud Risk Lab — Frontend Logic
+// Jasmeet Dhanota Project
+// ======================================================
 
-let aiFactorsChart = null;
-let rulesVsAiChart = null;
-let riskHistoryChart = null;
 let currentSampleIndex = 0;
 
+// ---------------- API ----------------
 const API_BASE = "https://deepfake-financial-crime-detector.onrender.com";
 
 // ---------------- SAMPLES ----------------
@@ -19,7 +17,7 @@ const samples = [
     amount: "48,750 USD",
     text: `Hi Alex,
 
-I'm boarding a flight and can't take calls. I need you to urgently process a wire transfer of 48,750 USD.
+I'm boarding a flight and can't take calls. I need you to urgently process a wire transfer of 48,750 USD to a new advisory firm we're using.
 
 This must be completed within 45 minutes. Do not inform anyone else — this is confidential.
 
@@ -33,12 +31,12 @@ Chief Executive Officer`,
     amount: "99,800 USD",
     text: `Dear Accounts Payable,
 
-We've updated our banking details. Please send today's payment of 99,800 USD.
+We've updated our banking details. Please send today's payment of 99,800 USD to the new account below.
 
 IBAN: DE89370400440532013001
 BIC: COBADEFFXXX
 
-Process immediately.`,
+This is already approved — process immediately.`,
   },
 ];
 
@@ -57,7 +55,9 @@ const riskScoreLabel = document.getElementById("riskScoreLabel");
 const keyIndicatorsList = document.getElementById("keyIndicatorsList");
 const safeAdviceList = document.getElementById("safeAdviceList");
 
-// ---------------- STATUS ----------------
+// ======================================================
+// STATUS
+// ======================================================
 function setStatus(msg, type = "info") {
   statusLine.textContent = msg;
 
@@ -66,7 +66,9 @@ function setStatus(msg, type = "info") {
   else statusLine.style.color = "#9caec7";
 }
 
-// ---------------- SAMPLE ----------------
+// ======================================================
+// SAMPLE LOADER
+// ======================================================
 function loadNextSample() {
   const sample = samples[currentSampleIndex];
 
@@ -80,47 +82,9 @@ function loadNextSample() {
   currentSampleIndex = (currentSampleIndex + 1) % samples.length;
 }
 
-// ---------------- CHARTS ----------------
-function renderAiFactorsChart(factors) {
-  const ctx = document.getElementById("aiFactorsChart").getContext("2d");
-
-  if (aiFactorsChart) aiFactorsChart.destroy();
-
-  aiFactorsChart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Urgency", "Authority", "Secrecy", "Payment", "Language"],
-      datasets: [
-        {
-          label: "AI Factor Strength",
-          data: [
-            factors.urgency,
-            factors.authority_impersonation,
-            factors.secrecy_or_bypass,
-            factors.unusual_payment_instructions,
-            factors.language_manipulation,
-          ],
-        },
-      ],
-    },
-  });
-}
-
-function renderRulesVsAiChart(ruleScore, aiScore) {
-  const ctx = document.getElementById("rulesVsAiChart").getContext("2d");
-
-  if (rulesVsAiChart) rulesVsAiChart.destroy();
-
-  rulesVsAiChart = new Chart(ctx, {
-    type: "doughnut",
-    data: {
-      labels: ["Rules Engine", "AI Model"],
-      datasets: [{ data: [ruleScore, aiScore] }],
-    },
-  });
-}
-
-// ---------------- ANALYSIS ----------------
+// ======================================================
+// MAIN ANALYSIS
+// ======================================================
 async function runAnalysis() {
   const message = messageInput.value.trim();
 
@@ -135,7 +99,9 @@ async function runAnalysis() {
   try {
     const res = await fetch(`${API_BASE}/api/analyze`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         message,
         channel: channelSelect.value,
@@ -150,17 +116,22 @@ async function runAnalysis() {
     riskScoreNumber.textContent = Math.round(data.finalScore);
     riskScoreLabel.textContent = data.level;
 
-    // ---------------- AI INDICATORS ----------------
+    // ---------------- RED FLAGS ----------------
     if (data.ai?.key_indicators?.length) {
       keyIndicatorsList.innerHTML = data.ai.key_indicators
         .map((i) => `<li>${i}</li>`)
         .join("");
+    } else {
+      keyIndicatorsList.innerHTML = "<li>No indicators detected</li>";
     }
 
+    // ---------------- SAFE GUIDANCE ----------------
     if (data.ai?.safe_handling_advice?.length) {
       safeAdviceList.innerHTML = data.ai.safe_handling_advice
         .map((i) => `<li>${i}</li>`)
         .join("");
+    } else {
+      safeAdviceList.innerHTML = "<li>No guidance generated</li>";
     }
 
     // ---------------- CHARTS ----------------
@@ -173,6 +144,8 @@ async function runAnalysis() {
       data.ai?.overall_risk_score || 0,
     );
 
+    loadRiskHistory();
+
     setStatus("Analysis complete ✅", "success");
   } catch (err) {
     console.error(err);
@@ -182,8 +155,92 @@ async function runAnalysis() {
   }
 }
 
-// ---------------- EVENTS ----------------
+// ======================================================
+// AI FACTORS BAR CHART
+// ======================================================
+let aiFactorsChart;
+
+function renderAiFactorsChart(factors) {
+  const ctx = document.getElementById("aiFactorsChart").getContext("2d");
+
+  if (aiFactorsChart) aiFactorsChart.destroy();
+
+  aiFactorsChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: Object.keys(factors),
+      datasets: [
+        {
+          label: "AI Risk Signals",
+          data: Object.values(factors),
+        },
+      ],
+    },
+  });
+}
+
+// ======================================================
+// RULES VS AI DONUT
+// ======================================================
+let rulesVsAiChart;
+
+function renderRulesVsAiChart(rulesScore, aiScore) {
+  const ctx = document.getElementById("rulesVsAiChart").getContext("2d");
+
+  if (rulesVsAiChart) rulesVsAiChart.destroy();
+
+  rulesVsAiChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Rules Engine", "AI Model"],
+      datasets: [
+        {
+          data: [rulesScore, aiScore],
+        },
+      ],
+    },
+  });
+}
+
+// ======================================================
+// RISK HISTORY (MongoDB)
+// ======================================================
+let riskHistoryChart;
+
+async function loadRiskHistory() {
+  try {
+    const res = await fetch(`${API_BASE}/api/events-summary`);
+    const data = await res.json();
+
+    const ctx = document.getElementById("riskHistoryChart").getContext("2d");
+
+    if (riskHistoryChart) riskHistoryChart.destroy();
+
+    riskHistoryChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: ["LOW", "MEDIUM", "HIGH"],
+        datasets: [
+          {
+            label: "Risk Events",
+            data: [data.LOW || 0, data.MEDIUM || 0, data.HIGH || 0],
+          },
+        ],
+      },
+    });
+  } catch (err) {
+    console.error("History load failed", err);
+  }
+}
+
+// ======================================================
+// EVENTS
+// ======================================================
 analyzeBtn.addEventListener("click", runAnalysis);
+
 sampleBtn.addEventListener("click", loadNextSample);
 
+// ======================================================
+// INIT
+// ======================================================
 setStatus("Load a sample or paste a message.");
