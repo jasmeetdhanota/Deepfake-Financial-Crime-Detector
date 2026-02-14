@@ -18,6 +18,8 @@ const PORT = process.env.PORT || 3000;
 if (!process.env.GROQ_API_KEY) {
   console.warn("⚠️ GROQ_API_KEY is not set in .env. AI analysis will fail.");
 }
+// 👇 ADD DEBUG LINE HERE
+console.log("Loaded GROQ KEY:", process.env.GROQ_API_KEY ? "YES" : "NO");
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
