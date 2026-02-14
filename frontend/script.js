@@ -1,8 +1,52 @@
 // Front-end logic for AI Payment Fraud Risk Lab
 
-let aiFactorsChart = null;
-let rulesVsAiChart = null;
-let riskHistoryChart = null;
+let currentSampleIndex = 0;
+
+// ---------------- API ----------------
+const API_BASE = "https://deepfake-financial-crime-detector.onrender.com";
+
+// ---------------- SAMPLES ----------------
+const samples = [
+  {
+    label: "CEO Impersonation (BEC)",
+    channel: "Email",
+    actorRole: "CEO",
+    amount: "48,750 USD",
+    text: `Hi Ayush,
+
+I'm boarding a flight and can't take calls. I need you to urgently process a wire transfer of 48,750 USD to a new advisory firm we're using.
+
+This must be completed within 45 minutes. Do not inform anyone else — this is confidential.
+
+– Ananya
+Chief Executive Officer`,
+  },
+  {
+    label: "Vendor Bank Change",
+    channel: "Email",
+    actorRole: "Vendor / Supplier",
+    amount: "99,800 USD",
+    text: `Dear Accounts Payable,
+
+We've updated our banking details. Please send today's payment of 99,800 USD to the new account below.
+
+IBAN: DE89370400440532013001
+BIC: COBADEFFXXX
+
+This is already approved — process immediately.`,
+  },
+  {
+    label: "Fraud Team Voice Scam",
+    channel: "Voice transcript",
+    actorRole: "Bank fraud team",
+    amount: "",
+    text: `Agent: Your account is under attack.
+
+To secure your funds, transfer your balance to our holding account immediately.
+
+Do not contact anyone else or your account will be frozen.`,
+  },
+];
 
 // ---------------- DOM ----------------
 const channelSelect = document.getElementById("channel");
@@ -15,46 +59,28 @@ const statusLine = document.getElementById("statusLine");
 
 const riskScoreNumber = document.getElementById("riskScoreNumber");
 const riskScoreLabel = document.getElementById("riskScoreLabel");
-const riskScoreDescription = document.getElementById("riskScoreDescription");
-
-const heuristicSummary = document.getElementById("heuristicSummary");
-const keyIndicatorsList = document.getElementById("keyIndicatorsList");
-const safeAdviceList = document.getElementById("safeAdviceList");
-const highlightedMessageDiv = document.getElementById("highlightedMessage");
-
-// 🔥 IMPORTANT — Backend base URL
-const API_BASE = "https://deepfake-financial-crime-detector.onrender.com";
 
 // ---------------- STATUS ----------------
 function setStatus(msg, type = "info") {
-  statusLine.textContent = msg || "";
-  if (!msg) return;
+  statusLine.textContent = msg;
 
   if (type === "error") statusLine.style.color = "#ff7b8c";
   else if (type === "success") statusLine.style.color = "#6ee7b7";
   else statusLine.style.color = "#9caec7";
 }
 
-// ---------------- HIGHLIGHT ----------------
-function highlightMessage(text) {
-  if (!text) return "";
+// ---------------- SAMPLE LOADER ----------------
+function loadNextSample() {
+  const sample = samples[currentSampleIndex];
 
-  const patterns = [
-    { r: /\burgent|immediately|asap|right now\b/gi, c: "token-urgency" },
-    { r: /\bceo|cfo|director|vp|executive\b/gi, c: "token-authority" },
-    { r: /\bconfidential|secret|do not share\b/gi, c: "token-secrecy" },
-    {
-      r: /\bwire|iban|swift|account|routing\b/gi,
-      c: "token-payment",
-    },
-  ];
+  channelSelect.value = sample.channel;
+  actorRoleSelect.value = sample.actorRole;
+  amountInput.value = sample.amount;
+  messageInput.value = sample.text;
 
-  let html = text;
-  patterns.forEach(
-    (p) => (html = html.replace(p.r, `<span class="${p.c}">$&</span>`)),
-  );
+  setStatus(`Loaded sample: ${sample.label}`, "success");
 
-  return html;
+  currentSampleIndex = (currentSampleIndex + 1) % samples.length;
 }
 
 // ---------------- ANALYSIS ----------------
@@ -81,75 +107,23 @@ async function runAnalysis() {
       }),
     });
 
-    if (!res.ok) throw new Error("Analysis failed");
-
     const data = await res.json();
 
-    const { finalScore, level, heuristics, ai } = data;
-
-    // Score
-    riskScoreNumber.textContent = Math.round(finalScore);
-    riskScoreLabel.textContent = level;
-
-    // Description
-    riskScoreDescription.textContent =
-      level === "HIGH"
-        ? "High fraud risk detected."
-        : level === "MEDIUM"
-          ? "Moderate fraud indicators detected."
-          : "Low fraud risk.";
-
-    // Heuristics
-    heuristicSummary.innerHTML = `
-      <li>Score: ${Math.round(heuristics.baseScore)}/100</li>
-      <li>Urgency: ${heuristics.urgencyHits}</li>
-      <li>Authority: ${heuristics.authorityHits}</li>
-      <li>Secrecy: ${heuristics.secrecyHits}</li>
-      <li>Payment keywords: ${heuristics.paymentHits}</li>
-    `;
-
-    // AI indicators
-    keyIndicatorsList.innerHTML =
-      ai?.key_indicators?.map((x) => `<li>${x}</li>`).join("") ||
-      "<li>No data</li>";
-
-    safeAdviceList.innerHTML =
-      ai?.safe_handling_advice?.map((x) => `<li>${x}</li>`).join("") ||
-      "<li>No data</li>";
-
-    highlightedMessageDiv.innerHTML = highlightMessage(message);
+    riskScoreNumber.textContent = Math.round(data.finalScore);
+    riskScoreLabel.textContent = data.level;
 
     setStatus("Analysis complete ✅", "success");
   } catch (err) {
     console.error(err);
-    setStatus("Error: " + err.message, "error");
+    setStatus("Analysis failed", "error");
   } finally {
     analyzeBtn.disabled = false;
   }
 }
 
-// ---------------- HISTORY ----------------
-async function refreshHistorySummary() {
-  try {
-    const res = await fetch(`${API_BASE}/api/events-summary`);
-
-    const data = await res.json();
-
-    console.log("History:", data);
-  } catch (err) {
-    console.error("History load failed", err);
-  }
-}
-
 // ---------------- EVENTS ----------------
 analyzeBtn.addEventListener("click", runAnalysis);
-
-messageInput.addEventListener("keydown", (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-    runAnalysis();
-  }
-});
+sampleBtn.addEventListener("click", loadNextSample);
 
 // Init
-setStatus("Paste a payment instruction to begin.");
-refreshHistorySummary();
+setStatus("Load a sample or paste a message.");
