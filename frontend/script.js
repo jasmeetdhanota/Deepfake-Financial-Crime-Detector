@@ -4,12 +4,7 @@ let aiFactorsChart = null;
 let rulesVsAiChart = null;
 let riskHistoryChart = null;
 
-// ===============================
-// 🌐 BACKEND BASE URL (Render)
-// ===============================
-const API_BASE = "https://deepfake-financial-crime-detector.onrender.com";
-
-// --- DOM references ---
+// ---------------- DOM ----------------
 const channelSelect = document.getElementById("channel");
 const actorRoleSelect = document.getElementById("actorRole");
 const amountInput = document.getElementById("amountInput");
@@ -27,142 +22,57 @@ const keyIndicatorsList = document.getElementById("keyIndicatorsList");
 const safeAdviceList = document.getElementById("safeAdviceList");
 const highlightedMessageDiv = document.getElementById("highlightedMessage");
 
-// ===============================
-// 📊 Status Utility
-// ===============================
+// 🔥 IMPORTANT — Backend base URL
+const API_BASE = "https://deepfake-financial-crime-detector.onrender.com";
+
+// ---------------- STATUS ----------------
 function setStatus(msg, type = "info") {
   statusLine.textContent = msg || "";
+  if (!msg) return;
 
   if (type === "error") statusLine.style.color = "#ff7b8c";
   else if (type === "success") statusLine.style.color = "#6ee7b7";
   else statusLine.style.color = "#9caec7";
 }
 
-// ===============================
-// 📌 Highlight Risky Phrases
-// ===============================
+// ---------------- HIGHLIGHT ----------------
 function highlightMessage(text) {
   if (!text) return "";
 
   const patterns = [
+    { r: /\burgent|immediately|asap|right now\b/gi, c: "token-urgency" },
+    { r: /\bceo|cfo|director|vp|executive\b/gi, c: "token-authority" },
+    { r: /\bconfidential|secret|do not share\b/gi, c: "token-secrecy" },
     {
-      regex:
-        /\burgent|immediately|asap|right now|within the next|do not delay/gi,
-      cls: "token-urgency",
-    },
-    {
-      regex: /\bceo|cfo|director|vp|executive|finance director/gi,
-      cls: "token-authority",
-    },
-    {
-      regex: /\bconfidential|secret|do not share|keep this between us/gi,
-      cls: "token-secrecy",
-    },
-    {
-      regex:
-        /\bwire transfer|bank transfer|iban|swift|crypto|bitcoin|account\b/gi,
-      cls: "token-payment",
+      r: /\bwire|iban|swift|account|routing\b/gi,
+      c: "token-payment",
     },
   ];
 
   let html = text;
-
-  patterns.forEach(({ regex, cls }) => {
-    html = html.replace(regex, (m) => `<span class="${cls}">${m}</span>`);
-  });
+  patterns.forEach(
+    (p) => (html = html.replace(p.r, `<span class="${p.c}">$&</span>`)),
+  );
 
   return html;
 }
 
-// ===============================
-// 📊 Charts
-// ===============================
-function initOrUpdateAiFactorsChart(factors) {
-  const ctx = document.getElementById("aiFactorsChart").getContext("2d");
-
-  const data = [
-    factors?.urgency ?? 0,
-    factors?.authority_impersonation ?? 0,
-    factors?.secrecy_or_bypass ?? 0,
-    factors?.unusual_payment_instructions ?? 0,
-    factors?.language_manipulation ?? 0,
-  ];
-
-  if (aiFactorsChart) {
-    aiFactorsChart.data.datasets[0].data = data;
-    aiFactorsChart.update();
-    return;
-  }
-
-  aiFactorsChart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Urgency", "Authority", "Secrecy", "Payment", "Language"],
-      datasets: [{ label: "AI Risk Factors", data }],
-    },
-  });
-}
-
-// ===============================
-// 📈 Risk History
-// ===============================
-async function refreshHistorySummary() {
-  try {
-    const res = await fetch(`${API_BASE}/api/events-summary`);
-    const data = await res.json();
-
-    if (!data.ok) return;
-
-    const ctx = document.getElementById("riskHistoryChart").getContext("2d");
-
-    const counts = { LOW: 0, MEDIUM: 0, HIGH: 0 };
-
-    data.byLevel.forEach((lvl) => {
-      counts[lvl._id] = lvl.count;
-    });
-
-    if (riskHistoryChart) {
-      riskHistoryChart.data.datasets[0].data = Object.values(counts);
-      riskHistoryChart.update();
-      return;
-    }
-
-    riskHistoryChart = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: ["LOW", "MEDIUM", "HIGH"],
-        datasets: [
-          {
-            label: "Fraud Events",
-            data: Object.values(counts),
-          },
-        ],
-      },
-    });
-  } catch (err) {
-    console.error("History load failed", err);
-  }
-}
-
-// ===============================
-// 🧠 Run Fraud Analysis
-// ===============================
+// ---------------- ANALYSIS ----------------
 async function runAnalysis() {
-  const message = messageInput.value;
+  const message = messageInput.value.trim();
 
   if (!message) {
-    setStatus("Paste message first.", "error");
+    setStatus("Please paste a message first.", "error");
     return;
   }
 
-  setStatus("Running fraud analysis…");
+  analyzeBtn.disabled = true;
+  setStatus("Running fraud analysis...", "info");
 
   try {
     const res = await fetch(`${API_BASE}/api/analyze`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         message,
         channel: channelSelect.value,
@@ -175,48 +85,71 @@ async function runAnalysis() {
 
     const data = await res.json();
 
+    const { finalScore, level, heuristics, ai } = data;
+
     // Score
-    riskScoreNumber.textContent = Math.round(data.finalScore);
-    riskScoreLabel.textContent = data.level;
+    riskScoreNumber.textContent = Math.round(finalScore);
+    riskScoreLabel.textContent = level;
+
+    // Description
+    riskScoreDescription.textContent =
+      level === "HIGH"
+        ? "High fraud risk detected."
+        : level === "MEDIUM"
+          ? "Moderate fraud indicators detected."
+          : "Low fraud risk.";
 
     // Heuristics
     heuristicSummary.innerHTML = `
-      <li>Urgency hits: ${data.heuristics.urgencyHits}</li>
-      <li>Authority hits: ${data.heuristics.authorityHits}</li>
-      <li>Secrecy hits: ${data.heuristics.secrecyHits}</li>
-      <li>Payment hits: ${data.heuristics.paymentHits}</li>
+      <li>Score: ${Math.round(heuristics.baseScore)}/100</li>
+      <li>Urgency: ${heuristics.urgencyHits}</li>
+      <li>Authority: ${heuristics.authorityHits}</li>
+      <li>Secrecy: ${heuristics.secrecyHits}</li>
+      <li>Payment keywords: ${heuristics.paymentHits}</li>
     `;
 
-    // AI Indicators
+    // AI indicators
     keyIndicatorsList.innerHTML =
-      data.ai?.key_indicators?.map((i) => `<li>${i}</li>`).join("") ||
+      ai?.key_indicators?.map((x) => `<li>${x}</li>`).join("") ||
       "<li>No data</li>";
 
-    // Advice
     safeAdviceList.innerHTML =
-      data.ai?.safe_handling_advice?.map((i) => `<li>${i}</li>`).join("") ||
+      ai?.safe_handling_advice?.map((x) => `<li>${x}</li>`).join("") ||
       "<li>No data</li>";
 
-    // Highlight text
     highlightedMessageDiv.innerHTML = highlightMessage(message);
 
-    // Charts
-    initOrUpdateAiFactorsChart(data.ai?.factor_scores);
-
-    refreshHistorySummary();
-
-    setStatus("Analysis complete", "success");
+    setStatus("Analysis complete ✅", "success");
   } catch (err) {
     console.error(err);
-    setStatus("Error running analysis", "error");
+    setStatus("Error: " + err.message, "error");
+  } finally {
+    analyzeBtn.disabled = false;
   }
 }
 
-// ===============================
-// 🎛️ Event Listeners
-// ===============================
+// ---------------- HISTORY ----------------
+async function refreshHistorySummary() {
+  try {
+    const res = await fetch(`${API_BASE}/api/events-summary`);
+
+    const data = await res.json();
+
+    console.log("History:", data);
+  } catch (err) {
+    console.error("History load failed", err);
+  }
+}
+
+// ---------------- EVENTS ----------------
 analyzeBtn.addEventListener("click", runAnalysis);
 
-// Initial state
-setStatus("Paste a payment instruction or load a sample.");
+messageInput.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    runAnalysis();
+  }
+});
+
+// Init
+setStatus("Paste a payment instruction to begin.");
 refreshHistorySummary();
