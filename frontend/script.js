@@ -17,7 +17,7 @@ const samples = [
     channel: "Email",
     actorRole: "CEO",
     amount: "48,750 USD",
-    text: `Hi Ayush,
+    text: `Hi Alex,
 
 I'm boarding a flight and can't take calls. I need you to urgently process a wire transfer of 48,750 USD.
 
