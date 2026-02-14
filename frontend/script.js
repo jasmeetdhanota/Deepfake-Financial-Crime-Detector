@@ -1,8 +1,13 @@
-// Front-end logic for AI Payment Fraud Risk Lab
+// ===============================
+// AI Payment Fraud Risk Lab
+// Full Production Frontend Logic
+// ===============================
 
+let aiFactorsChart = null;
+let rulesVsAiChart = null;
+let riskHistoryChart = null;
 let currentSampleIndex = 0;
 
-// ---------------- API ----------------
 const API_BASE = "https://deepfake-financial-crime-detector.onrender.com";
 
 // ---------------- SAMPLES ----------------
@@ -14,7 +19,7 @@ const samples = [
     amount: "48,750 USD",
     text: `Hi Ayush,
 
-I'm boarding a flight and can't take calls. I need you to urgently process a wire transfer of 48,750 USD to a new advisory firm we're using.
+I'm boarding a flight and can't take calls. I need you to urgently process a wire transfer of 48,750 USD.
 
 This must be completed within 45 minutes. Do not inform anyone else — this is confidential.
 
@@ -28,23 +33,12 @@ Chief Executive Officer`,
     amount: "99,800 USD",
     text: `Dear Accounts Payable,
 
-We've updated our banking details. Please send today's payment of 99,800 USD to the new account below.
+We've updated our banking details. Please send today's payment of 99,800 USD.
 
 IBAN: DE89370400440532013001
 BIC: COBADEFFXXX
 
-This is already approved — process immediately.`,
-  },
-  {
-    label: "Fraud Team Voice Scam",
-    channel: "Voice transcript",
-    actorRole: "Bank fraud team",
-    amount: "",
-    text: `Agent: Your account is under attack.
-
-To secure your funds, transfer your balance to our holding account immediately.
-
-Do not contact anyone else or your account will be frozen.`,
+Process immediately.`,
   },
 ];
 
@@ -60,6 +54,9 @@ const statusLine = document.getElementById("statusLine");
 const riskScoreNumber = document.getElementById("riskScoreNumber");
 const riskScoreLabel = document.getElementById("riskScoreLabel");
 
+const keyIndicatorsList = document.getElementById("keyIndicatorsList");
+const safeAdviceList = document.getElementById("safeAdviceList");
+
 // ---------------- STATUS ----------------
 function setStatus(msg, type = "info") {
   statusLine.textContent = msg;
@@ -69,7 +66,7 @@ function setStatus(msg, type = "info") {
   else statusLine.style.color = "#9caec7";
 }
 
-// ---------------- SAMPLE LOADER ----------------
+// ---------------- SAMPLE ----------------
 function loadNextSample() {
   const sample = samples[currentSampleIndex];
 
@@ -83,6 +80,46 @@ function loadNextSample() {
   currentSampleIndex = (currentSampleIndex + 1) % samples.length;
 }
 
+// ---------------- CHARTS ----------------
+function renderAiFactorsChart(factors) {
+  const ctx = document.getElementById("aiFactorsChart").getContext("2d");
+
+  if (aiFactorsChart) aiFactorsChart.destroy();
+
+  aiFactorsChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Urgency", "Authority", "Secrecy", "Payment", "Language"],
+      datasets: [
+        {
+          label: "AI Factor Strength",
+          data: [
+            factors.urgency,
+            factors.authority_impersonation,
+            factors.secrecy_or_bypass,
+            factors.unusual_payment_instructions,
+            factors.language_manipulation,
+          ],
+        },
+      ],
+    },
+  });
+}
+
+function renderRulesVsAiChart(ruleScore, aiScore) {
+  const ctx = document.getElementById("rulesVsAiChart").getContext("2d");
+
+  if (rulesVsAiChart) rulesVsAiChart.destroy();
+
+  rulesVsAiChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Rules Engine", "AI Model"],
+      datasets: [{ data: [ruleScore, aiScore] }],
+    },
+  });
+}
+
 // ---------------- ANALYSIS ----------------
 async function runAnalysis() {
   const message = messageInput.value.trim();
@@ -93,7 +130,7 @@ async function runAnalysis() {
   }
 
   analyzeBtn.disabled = true;
-  setStatus("Running fraud analysis...", "info");
+  setStatus("Running AI fraud analysis...", "info");
 
   try {
     const res = await fetch(`${API_BASE}/api/analyze`, {
@@ -109,8 +146,32 @@ async function runAnalysis() {
 
     const data = await res.json();
 
+    // ---------------- SCORE ----------------
     riskScoreNumber.textContent = Math.round(data.finalScore);
     riskScoreLabel.textContent = data.level;
+
+    // ---------------- AI INDICATORS ----------------
+    if (data.ai?.key_indicators?.length) {
+      keyIndicatorsList.innerHTML = data.ai.key_indicators
+        .map((i) => `<li>${i}</li>`)
+        .join("");
+    }
+
+    if (data.ai?.safe_handling_advice?.length) {
+      safeAdviceList.innerHTML = data.ai.safe_handling_advice
+        .map((i) => `<li>${i}</li>`)
+        .join("");
+    }
+
+    // ---------------- CHARTS ----------------
+    if (data.ai?.factor_scores) {
+      renderAiFactorsChart(data.ai.factor_scores);
+    }
+
+    renderRulesVsAiChart(
+      data.heuristics?.baseScore || 0,
+      data.ai?.overall_risk_score || 0,
+    );
 
     setStatus("Analysis complete ✅", "success");
   } catch (err) {
@@ -125,5 +186,4 @@ async function runAnalysis() {
 analyzeBtn.addEventListener("click", runAnalysis);
 sampleBtn.addEventListener("click", loadNextSample);
 
-// Init
 setStatus("Load a sample or paste a message.");
