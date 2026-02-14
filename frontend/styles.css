@@ -471,7 +471,7 @@ textarea {
 }
 
 .chart-view {
-  display: block !important;
+  display: none;
 }
 
 .chart-view.active {

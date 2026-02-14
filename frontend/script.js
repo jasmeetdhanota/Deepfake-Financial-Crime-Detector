@@ -56,6 +56,30 @@ const keyIndicatorsList = document.getElementById("keyIndicatorsList");
 const safeAdviceList = document.getElementById("safeAdviceList");
 
 // ======================================================
+// TAB SWITCHING LOGIC
+// ======================================================
+
+const tabs = document.querySelectorAll(".chart-tab");
+const chartViews = document.querySelectorAll(".chart-view");
+
+tabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    // Remove active class from all tabs
+    tabs.forEach((t) => t.classList.remove("active"));
+
+    // Hide all chart views
+    chartViews.forEach((view) => view.classList.remove("active"));
+
+    // Activate clicked tab
+    tab.classList.add("active");
+
+    // Show target chart
+    const targetId = tab.dataset.target;
+    document.getElementById(targetId).classList.add("active");
+  });
+});
+
+// ======================================================
 // STATUS
 // ======================================================
 function setStatus(msg, type = "info") {
@@ -259,3 +283,4 @@ sampleBtn.addEventListener("click", loadNextSample);
 // INIT
 // ======================================================
 setStatus("Load a sample or paste a message.");
+document.getElementById("aiFactorsView").classList.add("active");
