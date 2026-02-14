@@ -182,22 +182,30 @@ function renderAiFactorsChart(factors) {
 // ======================================================
 // RULES VS AI DONUT
 // ======================================================
-let rulesVsAiChart;
-
+// ---------------- RULES VS AI DONUT ----------------
 function renderRulesVsAiChart(rulesScore, aiScore) {
-  const ctx = document.getElementById("rulesVsAiChart").getContext("2d");
+  const ctx = document.getElementById("rulesVsAiChart");
 
-  if (rulesVsAiChart) rulesVsAiChart.destroy();
+  if (!ctx) return;
 
-  rulesVsAiChart = new Chart(ctx, {
+  new Chart(ctx, {
     type: "doughnut",
     data: {
       labels: ["Rules Engine", "AI Model"],
       datasets: [
         {
           data: [rulesScore, aiScore],
+          backgroundColor: ["#1f77b4", "#22c55e"],
+          borderWidth: 0,
         },
       ],
+    },
+    options: {
+      plugins: {
+        legend: {
+          labels: { color: "#cbd5e1" },
+        },
+      },
     },
   });
 }
