@@ -182,34 +182,28 @@ function renderAiFactorsChart(factors) {
 // ======================================================
 // RULES VS AI DONUT
 // ======================================================
-// ---------------- RULES VS AI DONUT ----------------
+let rulesVsAiChart;
+
 function renderRulesVsAiChart(rulesScore, aiScore) {
-  const ctx = document.getElementById("rulesVsAiChart");
+  const canvas = document.getElementById("rulesVsAiChart");
+  if (!canvas) return;
 
-  if (!ctx) return;
+  const ctx = canvas.getContext("2d");
 
-  new Chart(ctx, {
+  if (rulesVsAiChart) rulesVsAiChart.destroy();
+
+  rulesVsAiChart = new Chart(ctx, {
     type: "doughnut",
     data: {
       labels: ["Rules Engine", "AI Model"],
       datasets: [
         {
           data: [rulesScore, aiScore],
-          backgroundColor: ["#1f77b4", "#22c55e"],
-          borderWidth: 0,
         },
       ],
     },
-    options: {
-      plugins: {
-        legend: {
-          labels: { color: "#cbd5e1" },
-        },
-      },
-    },
   });
 }
-
 // ======================================================
 // RISK HISTORY (MongoDB)
 // ======================================================
@@ -219,6 +213,19 @@ async function loadRiskHistory() {
   try {
     const res = await fetch(`${API_BASE}/api/events-summary`);
     const data = await res.json();
+
+    if (!data?.byLevel) return;
+
+    // Convert API array → chart values
+    const counts = {
+      LOW: 0,
+      MEDIUM: 0,
+      HIGH: 0,
+    };
+
+    data.byLevel.forEach((item) => {
+      counts[item._id] = item.count;
+    });
 
     const ctx = document.getElementById("riskHistoryChart").getContext("2d");
 
@@ -231,7 +238,7 @@ async function loadRiskHistory() {
         datasets: [
           {
             label: "Risk Events",
-            data: [data.LOW || 0, data.MEDIUM || 0, data.HIGH || 0],
+            data: [counts.LOW, counts.MEDIUM, counts.HIGH],
           },
         ],
       },

@@ -3,7 +3,7 @@
   --bg: #050910;
   --bg-elevated: #0b1420;
   --panel: #0f1824;
-  --accent: #00a3e0;   /* JPM blue */
+  --accent: #00a3e0; /* JPM blue */
   --accent-soft: #1f4b99;
   --accent-danger: #ff4b6a;
   --accent-warn: #ffb347;
@@ -32,8 +32,13 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Inter", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Text",
+    "Inter",
+    sans-serif;
   color: var(--text);
   background: radial-gradient(circle at top, #10254a 0, #020712 50%, #000 100%);
 }
@@ -185,7 +190,10 @@ textarea {
   color: var(--text);
   font-size: 13px;
   outline: none;
-  transition: border 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  transition:
+    border 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
 }
 
 select:focus,
@@ -220,7 +228,10 @@ textarea {
   cursor: pointer;
   font-size: 13px;
   padding: 8px 16px;
-  transition: transform 0.08s ease, box-shadow 0.1s ease, background 0.15s ease,
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.1s ease,
+    background 0.15s ease,
     border 0.15s ease;
 }
 
@@ -228,7 +239,9 @@ textarea {
   background: linear-gradient(90deg, var(--accent), #2fb8ff);
   color: #03111b;
   font-weight: 600;
-  box-shadow: 0 0 0 1px rgba(51, 195, 255, 0.2), 0 10px 25px rgba(0, 163, 224, 0.65);
+  box-shadow:
+    0 0 0 1px rgba(51, 195, 255, 0.2),
+    0 10px 25px rgba(0, 163, 224, 0.65);
 }
 
 .btn-primary:active {
@@ -458,7 +471,7 @@ textarea {
 }
 
 .chart-view {
-  display: none;
+  display: block !important;
 }
 
 .chart-view.active {
